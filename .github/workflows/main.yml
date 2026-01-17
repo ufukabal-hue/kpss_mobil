@@ -7,40 +7,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Java Kur
+      - name: Java ve Python Kur
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Python Kur
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Sistem Bağımlılıklarını Kur
+      - name: Sistem Gereksinimlerini Kur
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libffi-dev git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libssl-dev
-          # Cython'un spesifik bir sürümünü kurmak hataları önler
           pip install Cython==0.29.33 buildozer flet pandas openpyxl
 
-      - name: Buildozer Spec Düzenle ve APK Üret
+      - name: Buildozer Ayarlarını Zorla Yapılandır
         run: |
           buildozer init
-          # Spec dosyasını tek seferde düzenle
+          # Spec dosyasını temiz ve Flet uyumlu hale getir
           sed -i 's/requirements = python3,kivy/requirements = python3,flet==0.8.2,pandas,openpyxl/' buildozer.spec
           sed -i 's/#android.api = 31/android.api = 33/' buildozer.spec
           sed -i 's/#android.minapi = 21/android.minapi = 24/' buildozer.spec
           sed -i 's/p4a.bootstrap = sdl2/p4a.bootstrap = /' buildozer.spec
           sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
-          
-          # Lisansları onayla ve paketle
+          # Mimariyi tek tipe indirerek hata riskini azalt
+          sed -i 's/android.archs = arm64-v8a, armeabi-v7a/android.archs = arm64-v8a/' buildozer.spec
+
+      - name: APK Paketle
+        run: |
+          # Lisansları ve build işlemini başlat
           yes | buildozer -v android debug
         continue-on-error: false
 
-      - name: APK Dosyasını Yayınla
+      - name: APK'yı Yayınla
         uses: actions/upload-artifact@v4
         with:
-          name: KPSS_Uygulamasi_Final
+          name: KPSS_Uygulamasi_Hazir
           path: bin/*.apk
